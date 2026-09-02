@@ -4810,156 +4810,19 @@ async function loadOverrides(){
 
   if(!data) return;
 
-  // IMPORTANTE: a partir daqui, o que vem do Supabase só ACRESCENTA ou
-  // ATUALIZA em cima dos dados que já existem no arquivo — nunca apaga
-  // nada primeiro. Isso evita que uma gravação antiga/parcial no banco
-  // "suma" com convênios, valores, ramais, médicos etc. que já estavam
-  // prontos aqui no HTML.
-
-  if(Array.isArray(data.convenios) && data.convenios.length){
-    // Mescla por "id": atualiza os que já existem, adiciona os novos,
-    // mas mantém os convênios do arquivo que não vieram no snapshot salvo.
-    data.convenios.forEach(c => {
-      if(!c || !c.id) return;
-      const idx = CONVENIOS.findIndex(x => x.id === c.id);
-      if(idx >= 0) CONVENIOS[idx] = c; else CONVENIOS.push(c);
-    });
-  }
-  if(data.convenioData && Object.keys(data.convenioData).length){
-    // Mesma lógica dos Códigos TUSS/Valores: o arquivo é a referência.
-    // Pra cada convênio, cada SEÇÃO que já existe no arquivo mantém os
-    // itens do arquivo (por título) — o banco só acrescenta itens ou
-    // seções realmente novos (cadastrados depois, pelo site).
-    Object.keys(data.convenioData).forEach(convId => {
-      const savedSecs = data.convenioData[convId];
-      if(!Array.isArray(savedSecs)) return;
-      if(!Array.isArray(CONVENIO_DATA[convId])) CONVENIO_DATA[convId] = [];
-      const fileSecs = CONVENIO_DATA[convId];
-      savedSecs.forEach(savedSec => {
-        if(!savedSec || !savedSec.id) return;
-        const fileSec = fileSecs.find(s => s.id === savedSec.id);
-        if(!fileSec){
-          // Seção só existe no banco (criada depois do arquivo) — mantém.
-          fileSecs.push(savedSec);
-          return;
-        }
-        const fileTitles = new Set((fileSec.items || []).map(it => it.title));
-        (savedSec.items || []).forEach(it => {
-          if(it && it.title && !fileTitles.has(it.title)){
-            fileSec.items.push(it);
-          }
-        });
-      });
-    });
-  }
-  if(data.valoresExames){
-    // Mesma lógica usada nos Códigos TUSS: o arquivo (com os preços mais
-    // recentes) é a referência — ele sempre "ganha" pros exames que já
-    // existem nos dois lados. O Supabase só acrescenta exames extras que
-    // alguém tenha cadastrado manualmente e que não estejam no arquivo.
-    Object.keys(data.valoresExames).forEach(cat => {
-      if(!Array.isArray(data.valoresExames[cat])) return;
-      if(!Array.isArray(VALORES_EXAMES[cat])) VALORES_EXAMES[cat] = [];
-
-      const byProc = new Set(VALORES_EXAMES[cat].map(x => x.procedimento));
-      data.valoresExames[cat].forEach(item => {
-        if(!item || !item.procedimento) return;
-        if(!byProc.has(item.procedimento)){
-          VALORES_EXAMES[cat].push(item);
-        }
-      });
-    });
-  }
-  if(data.valoresSocioRemido){
-    Object.keys(data.valoresSocioRemido).forEach(cat => {
-      if(!Array.isArray(data.valoresSocioRemido[cat])) return;
-      if(!Array.isArray(VALORES_SOCIO_REMIDO[cat])) VALORES_SOCIO_REMIDO[cat] = [];
-      const byProc = new Set(VALORES_SOCIO_REMIDO[cat].map(x => x.procedimento));
-      data.valoresSocioRemido[cat].forEach(item => {
-        if(!item || !item.procedimento) return;
-        if(!byProc.has(item.procedimento)) VALORES_SOCIO_REMIDO[cat].push(item);
-      });
-    });
-  }
-  if(data.ramais && Object.keys(data.ramais).length){
-    // Idem: ramal que já existe no arquivo (mesmo nome/setor) não é
-    // sobrescrito pelo banco — só ramais novos são acrescentados.
-    Object.keys(data.ramais).forEach(k => {
-      if(!Array.isArray(data.ramais[k])) return;
-      if(!Array.isArray(RAMAIS[k])) RAMAIS[k] = [];
-      const existentes = new Set(RAMAIS[k].map(r => JSON.stringify(r)));
-      data.ramais[k].forEach(r => {
-        const chave = JSON.stringify(r);
-        if(!existentes.has(chave)){ RAMAIS[k].push(r); existentes.add(chave); }
-      });
-    });
-  }
-  if(data.medicos && Object.keys(data.medicos).length){
-    // Cada médico(a) é { obs: boolean, exames: [...] }. O arquivo mantém
-    // seus exames; o banco só acrescenta exames novos pra médicos que já
-    // existem, ou médicos inteiramente novos que não estão no arquivo.
-    Object.keys(data.medicos).forEach(medId => {
-      const saved = data.medicos[medId];
-      if(!saved || !Array.isArray(saved.exames)) return;
-      if(!MEDICOS[medId]){ MEDICOS[medId] = saved; return; }
-      const existentes = new Set(MEDICOS[medId].exames);
-      saved.exames.forEach(ex => { if(!existentes.has(ex)){ MEDICOS[medId].exames.push(ex); existentes.add(ex); } });
-    });
-  }
-  if(data.equipamentosRM && Object.keys(data.equipamentosRM).length){
-    Object.keys(data.equipamentosRM).forEach(catId => {
-      const savedItems = data.equipamentosRM[catId];
-      if(!Array.isArray(savedItems)) return;
-      if(!Array.isArray(EQUIPAMENTOS_RM[catId])) EQUIPAMENTOS_RM[catId] = [];
-      const fileExames = new Set(EQUIPAMENTOS_RM[catId].map(x => x.exame));
-      savedItems.forEach(it => { if(it && it.exame && !fileExames.has(it.exame)) EQUIPAMENTOS_RM[catId].push(it); });
-    });
-  }
-  if(data.equipamentosCT && Object.keys(data.equipamentosCT).length){
-    Object.keys(data.equipamentosCT).forEach(catId => {
-      const savedItems = data.equipamentosCT[catId];
-      if(!Array.isArray(savedItems)) return;
-      if(!Array.isArray(EQUIPAMENTOS_CT[catId])) EQUIPAMENTOS_CT[catId] = [];
-      const fileExames = new Set(EQUIPAMENTOS_CT[catId].map(x => x.exame));
-      savedItems.forEach(it => { if(it && it.exame && !fileExames.has(it.exame)) EQUIPAMENTOS_CT[catId].push(it); });
-    });
-  }
-  if(Array.isArray(data.equipamentosNotes) && data.equipamentosNotes.length){
-    data.equipamentosNotes.forEach(n => {
-      if(!EQUIPAMENTOS_NOTES.includes(n)) EQUIPAMENTOS_NOTES.push(n);
-    });
-  }
-  if(Array.isArray(data.equipamentosPreparos) && data.equipamentosPreparos.length){
-    // Mesma lógica dos Códigos TUSS e da Tabela de Valores: o arquivo é a
-    // referência mais atual — preparos que já existem nele (mesmo título)
-    // mantêm a versão do arquivo. O Supabase só acrescenta preparos novos.
-    const titulosNoArquivo = new Set(EQUIPAMENTOS_PREPAROS.map(p => p.titulo));
-    data.equipamentosPreparos.forEach(p => {
-      if(p && p.titulo && !titulosNoArquivo.has(p.titulo)){
-        EQUIPAMENTOS_PREPAROS.push(p);
-      }
-    });
-  }
-  if(data.codigosExames){
-    // Não substitui a lista completa por um snapshot antigo do Supabase.
-    // O PDF/arquivo é a referência mínima: todos os seus códigos permanecem
-    // disponíveis; o Supabase só acrescenta códigos personalizados extras.
-    Object.keys(data.codigosExames).forEach(cat => {
-      if(!Array.isArray(data.codigosExames[cat])) return;
-      if(!Array.isArray(CODIGOS_EXAMES[cat])) CODIGOS_EXAMES[cat] = [];
-
-      const byCode = new Map(CODIGOS_EXAMES[cat].map(x => [String(x.codigo), x]));
-      data.codigosExames[cat].forEach(item => {
-        const code = String(item.codigo || "").trim();
-        if(!code) return;
-        // Códigos que já existem no arquivo mantêm a versão do arquivo.
-        // Só entra o que for realmente novo (cadastrado depois, no Supabase).
-        if(!byCode.has(code)){
-          CODIGOS_EXAMES[cat].push(item);
-        }
-      });
-    });
-  }
+  // O Supabase é a fonte de verdade pra qualquer categoria que ele já
+  // tenha recebido alguma vez — ou seja, uma edição feita e salva pela
+  // tela sempre "vence" o valor que está escrito aqui no arquivo,
+  // mesmo em abas novas ou depois de recarregar a página.
+  //
+  // O arquivo só continua sendo usado como ponto de partida pras
+  // categorias que o Supabase AINDA NUNCA recebeu (por exemplo, a
+  // primeiríssima vez que alguém abre o site, antes de qualquer
+  // edição ter sido salva) — isso é decidido dentro de
+  // applyLiveSnapshot(), categoria por categoria: só troca o que
+  // realmente veio preenchido no "data" salvo, e deixa o resto do
+  // arquivo intacto.
+  applyLiveSnapshot(data);
 }
 
 async function manualSaveClick(){
@@ -5695,11 +5558,13 @@ function subscribeToLiveUpdates(){
   }
 }
 
-// Ao contrário do loadOverrides() (que roda só uma vez, no carregamento
-// da página, e por segurança nunca deixa o banco "apagar" o que já
-// existe no arquivo), essa função troca os dados na hora — porque ela só
-// roda quando alguém ACABOU de salvar uma edição de verdade, então o que
-// vem do banco já é a versão mais nova e correta.
+// Usada tanto pelo carregamento inicial (loadOverrides) quanto pelas
+// atualizações em tempo real: sempre que o Supabase já tiver dado de
+// uma categoria, ele "vence" o que está escrito aqui no arquivo — o
+// arquivo só continua valendo pras categorias que o banco ainda nunca
+// recebeu (perguntas frequentes: por que não é o contrário? porque o
+// uso normal do sistema é editar pela tela, esperando que a edição
+// realmente "pegue" da próxima vez que a página abrir).
 function applyLiveSnapshot(data){
   if(!data) return;
   if(Array.isArray(data.convenios)){
