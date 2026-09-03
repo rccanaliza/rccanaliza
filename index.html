@@ -1117,6 +1117,12 @@
 .login-cancel{background:var(--bg);color:var(--ink-soft);border:1px solid var(--line)!important;}
 .login-submit{background:var(--cyan);color:var(--navy);}
 #authGate{position:fixed;inset:0;background:var(--navy);display:none;align-items:center;justify-content:center;padding:18px;z-index:40000;}
+#setPasswordGate{position:fixed;inset:0;background:var(--navy);display:none;align-items:center;justify-content:center;padding:18px;z-index:41000;}
+#setPasswordGate .auth-box{width:min(380px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:28px 24px;text-align:center;}
+#setPasswordGate .auth-logo{width:56px;height:56px;border-radius:12px;margin:0 auto 14px;display:block;}
+#setPasswordGate .login-field{text-align:left;}
+#setPasswordGate .login-actions{justify-content:stretch;}
+#setPasswordGate .login-submit{flex:1;padding:11px 14px;}
 #authGate .auth-box{width:min(380px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:28px 24px;text-align:center;}
 #authGate .auth-logo{width:56px;height:56px;border-radius:12px;margin:0 auto 14px;display:block;}
 #authGate .login-field{text-align:left;}
@@ -5323,7 +5329,10 @@ function ensureProasaGuia(){
   const jaTem = sec.items.some(it => /guia-transcricao-proasa\.pdf/.test(it.body || ""));
   if(!jaTem){
     sec.items.push({ title: "Guia de transcrição (obrigatória)", op: true, body: `<p>É <strong>obrigatório</strong> transcrever o pedido médico para a guia SP/SADT da Proasa antes de enviar para autorização.</p><button type="button" class="btn-guia-pdf" onclick="abrirGuiaTranscricao(GUIA_TRANSCRICAO_PROASA_B64, 'guia-transcricao-proasa.pdf')" style="margin-top:8px; padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--navy); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer;">📄 Abrir guia para impressão</button>` });
-    saveOverrides();
+    // Só tenta salvar de volta no banco se quem está logada for admin —
+    // pra quem só pesquisa, o ajuste continua valendo na tela dela
+    // (em memória), só não é enviado pro Supabase (ela nem tem permissão).
+    if(editMode) saveOverrides();
   }
 }
 
@@ -5346,7 +5355,7 @@ function ensureGuiaTranscricao(convenioId, base64Var, base64Value, nomeArquivo, 
       op: true,
       body: `<p>É <strong>obrigatório</strong> transcrever o pedido médico para a guia SP/SADT da ${nomeConvenio} antes de enviar para autorização.</p><button type="button" class="btn-guia-pdf" onclick="abrirGuiaTranscricao(${base64Var}, '${nomeArquivo}')" style="margin-top:8px; padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--navy); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer;">📄 Abrir guia para impressão</button>`
     });
-    saveOverrides();
+    if(editMode) saveOverrides();
   }
 }
 
@@ -5379,7 +5388,7 @@ function ensureCodigosParaTodosConvenios(){
       mudou = true;
     }
   });
-  if(mudou) saveOverrides();
+  if(mudou && editMode) saveOverrides();
 }
 
 
@@ -5473,11 +5482,27 @@ async function initApp(){
   if(authEmailEl) authEmailEl.addEventListener("keydown", e => { if(e.key === "Enter") document.getElementById("authPassword")?.focus(); });
   if(authPasswordEl) authPasswordEl.addEventListener("keydown", e => { if(e.key === "Enter") doLogin(); });
 
+  const newPasswordEl = document.getElementById("newPassword");
+  const newPasswordConfirmEl = document.getElementById("newPasswordConfirm");
+  if(newPasswordEl) newPasswordEl.addEventListener("keydown", e => { if(e.key === "Enter") document.getElementById("newPasswordConfirm")?.focus(); });
+  if(newPasswordConfirmEl) newPasswordConfirmEl.addEventListener("keydown", e => { if(e.key === "Enter") submitNewPassword(); });
+
   // Ninguém vê nenhuma tela do site (nem pra pesquisar) sem logar antes.
   try{
     const { data: { session } } = await db.auth.getSession();
     if(session && session.user){
       applyUserSession(session.user);
+      // Se a pessoa acabou de chegar pelo link de confirmação do e-mail
+      // (não por um login normal digitando e-mail/senha), pede pra ela
+      // criar a própria senha antes de liberar o resto do sistema — assim
+      // ela sai sabendo a senha dela, em vez de só ficar logada até sair
+      // da conta e travar sem saber como voltar a entrar.
+      const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
+      if(hashParams.get("type") === "signup" || hashParams.get("type") === "invite"){
+        history.replaceState(null, "", location.pathname + location.search);
+        showSetPasswordGate();
+        return;
+      }
       hideAuthGate();
       await bootApp();
       return;
@@ -5486,6 +5511,51 @@ async function initApp(){
     console.error("Erro ao checar sessão de login:", e.message);
   }
   showAuthGate();
+}
+
+function showSetPasswordGate(){
+  const gate = document.getElementById("setPasswordGate");
+  if(gate) gate.style.display = "flex";
+  const logoEl = document.getElementById("setPasswordLogoImg");
+  if(logoEl) logoEl.src = "data:image/jpeg;base64," + RCC_LOGO_B64;
+  setTimeout(() => { document.getElementById("newPassword")?.focus(); }, 60);
+}
+
+function hideSetPasswordGate(){
+  const gate = document.getElementById("setPasswordGate");
+  if(gate) gate.style.display = "none";
+}
+
+async function submitNewPassword(){
+  const senha = document.getElementById("newPassword").value || "";
+  const confirmacao = document.getElementById("newPasswordConfirm").value || "";
+  const errEl = document.getElementById("setPasswordError");
+  const btnEl = document.getElementById("setPasswordSubmitBtn");
+
+  if(errEl){ errEl.style.display = "none"; }
+  if(senha.length < 6){
+    if(errEl){ errEl.textContent = "A senha precisa ter pelo menos 6 caracteres."; errEl.style.display = "block"; }
+    return;
+  }
+  if(senha !== confirmacao){
+    if(errEl){ errEl.textContent = "As duas senhas digitadas não são iguais."; errEl.style.display = "block"; }
+    return;
+  }
+
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = "Salvando..."; }
+  try{
+    const { error } = await db.auth.updateUser({ password: senha });
+    if(error){
+      if(errEl){ errEl.textContent = "Não foi possível salvar: " + error.message; errEl.style.display = "block"; }
+      return;
+    }
+    hideSetPasswordGate();
+    await bootApp();
+  }catch(e){
+    if(errEl){ errEl.textContent = "Falha de conexão: " + e.message; errEl.style.display = "block"; }
+  }finally{
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = "Salvar senha e entrar"; }
+  }
 }
 
 async function bootApp(){
@@ -5724,6 +5794,26 @@ if(document.readyState === "loading"){
     <div id="usersListBody" style="display:none;"></div>
     <div class="login-actions">
       <button type="button" class="login-cancel" onclick="closeUsersListModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="setPasswordGate" aria-hidden="true">
+  <div class="auth-box" role="dialog" aria-modal="true" aria-labelledby="setPasswordTitle">
+    <img class="auth-logo" id="setPasswordLogoImg" alt="Logo RCC Diagnósticos por Imagem">
+    <h2 id="setPasswordTitle">Bem-vinda(o)!</h2>
+    <p class="login-sub">Sua conta foi confirmada. Antes de continuar, crie a senha que você vai usar para entrar da próxima vez.</p>
+    <div class="login-field">
+      <label for="newPassword">Nova senha</label>
+      <input id="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="login-field">
+      <label for="newPasswordConfirm">Confirme a senha</label>
+      <input id="newPasswordConfirm" type="password" autocomplete="new-password" placeholder="Digite a senha de novo">
+    </div>
+    <div id="setPasswordError" class="login-error" style="display:none;"></div>
+    <div class="login-actions">
+      <button type="button" class="login-submit" id="setPasswordSubmitBtn" onclick="submitNewPassword()">Salvar senha e entrar</button>
     </div>
   </div>
 </div>
