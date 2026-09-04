@@ -5417,10 +5417,14 @@ function ensureProasaGuia(){
   const jaTem = sec.items.some(it => /guia-transcricao-proasa\.pdf/.test(it.body || ""));
   if(!jaTem){
     sec.items.push({ title: "Guia de transcrição (obrigatória)", op: true, body: `<p>É <strong>obrigatório</strong> transcrever o pedido médico para a guia SP/SADT da Proasa antes de enviar para autorização.</p><button type="button" class="btn-guia-pdf" onclick="abrirGuiaTranscricao(GUIA_TRANSCRICAO_PROASA_B64, 'guia-transcricao-proasa.pdf')" style="margin-top:8px; padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--navy); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer;">📄 Abrir guia para impressão</button>` });
-    // Só tenta salvar de volta no banco se quem está logada for admin —
-    // pra quem só pesquisa, o ajuste continua valendo na tela dela
-    // (em memória), só não é enviado pro Supabase (ela nem tem permissão).
-    if(editMode) saveOverrides();
+    // Esse ajuste fica valendo na tela de quem está usando agora (em
+    // memória), mas NÃO salva sozinho no banco — salvar automaticamente
+    // aqui já causou perda de edições de outras pessoas antes (essa
+    // função rodava toda vez que qualquer admin fazia login, e podia
+    // sobrescrever uma edição mais recente feita por outra pessoa com
+    // uma versão desatualizada da própria sessão). Se esse ajuste
+    // realmente precisar ficar salvo pra sempre, uma administradora
+    // confirma isso clicando em "Salvar" manualmente.
   }
 }
 
@@ -5443,7 +5447,8 @@ function ensureGuiaTranscricao(convenioId, base64Var, base64Value, nomeArquivo, 
       op: true,
       body: `<p>É <strong>obrigatório</strong> transcrever o pedido médico para a guia SP/SADT da ${nomeConvenio} antes de enviar para autorização.</p><button type="button" class="btn-guia-pdf" onclick="abrirGuiaTranscricao(${base64Var}, '${nomeArquivo}')" style="margin-top:8px; padding:9px 14px; border-radius:8px; border:1px solid var(--line); background:var(--navy); color:#fff; font-size:13.5px; font-weight:700; cursor:pointer;">📄 Abrir guia para impressão</button>`
     });
-    if(editMode) saveOverrides();
+    // Mesma decisão do ensureProasaGuia logo acima: não salva sozinho
+    // no banco, só ajusta a tela de quem está usando agora.
   }
 }
 
@@ -5476,7 +5481,8 @@ function ensureCodigosParaTodosConvenios(){
       mudou = true;
     }
   });
-  if(mudou && editMode) saveOverrides();
+  // Mesma decisão das outras funções "ensure*": não salva sozinho no
+  // banco automaticamente — só ajusta a tela de quem está usando agora.
 }
 
 
@@ -5687,10 +5693,13 @@ async function bootApp(){
   ensureProasaGuia();
   ensureTodasGuiasTranscricao();
   ensureCodigosParaTodosConvenios();
-  // Corrige de vez o que estiver desatualizado no Supabase (ex: preços
-  // antigos salvos antes de uma atualização de tabela) — só quando for
-  // administrador, pra não gerar erro de permissão pra quem só pesquisa.
-  if(editMode) saveOverrides();
+  // IMPORTANTE: propositalmente NÃO salva automaticamente aqui. Salvar
+  // sozinho toda vez que uma admin loga é perigoso — se essa sessão
+  // carregar um instante antes de outra pessoa salvar uma edição em
+  // outro lugar, esse "auto-salvar" sobrescreveria a edição da outra
+  // pessoa com uma versão mais velha, sem ninguém perceber. Qualquer
+  // ajuste só é salvo de verdade quando alguém clica em "Salvar" ou
+  // edita algo especificamente.
 
   buildConvenios();
   buildChips();
@@ -5729,7 +5738,7 @@ async function bootApp(){
   if(usersListOverlayEl) usersListOverlayEl.addEventListener("click", e => { if(e.target.id === "usersListOverlay") closeUsersListModal(); });
 
   subscribeToLiveUpdates();
-  setTimeout(checkForNewVersion, 15000); // uma checagem inicial, 15s depois de carregar
+  setTimeout(checkForNewVersion, 3000); // checagem inicial bem mais rápida — 3s depois de carregar
 }
 
 // ---------- Atualização em tempo real (Supabase Realtime) ----------
@@ -5793,7 +5802,7 @@ function subscribeToLiveUpdates(){
   // Checagem periódica, independente de qualquer edição acontecer —
   // cobre o caso de alguém deixar a aba aberta por muito tempo sem que
   // ninguém mexa em nada, mas uma atualização tenha sido publicada.
-  setInterval(checkForNewVersion, 3 * 60 * 1000); // a cada 3 minutos
+  setInterval(checkForNewVersion, 45 * 1000); // a cada 45 segundos — bem mais frequente
 }
 
 // Usada tanto pelo carregamento inicial (loadOverrides) quanto pelas
