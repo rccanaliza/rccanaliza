@@ -1132,6 +1132,8 @@
 #authGate .login-actions{justify-content:stretch;}
 #authGate .login-submit{flex:1;padding:11px 14px;}
 #userBar{position:fixed;top:10px;right:12px;z-index:9000;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 14px;display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-soft);box-shadow:0 2px 10px rgba(0,0,0,.12);}
+#newVersionBanner{position:fixed;top:0;left:0;right:0;background:#1E2761;color:#fff;padding:10px 16px;text-align:center;font-size:13.5px;font-weight:600;z-index:60000;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.2);}
+#newVersionBanner:hover{background:#2a3a8a;}
 #userBar button{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;}
 .conv-card{ position: relative; }
 .conv-card .edit-icons{ position: absolute; top: 6px; right: 6px; display: flex; }
@@ -4763,6 +4765,11 @@ let currentUser = null; // {id, email, nome, isAdmin} — preenchido após login
 // pessoa). O que diferencia administrador de quem só pesquisa é o
 // campo "admin" guardado no metadata de cada conta (ver instruções de
 // como criar novos usuários).
+// Muda esse valor toda vez que uma versão nova do arquivo é publicada.
+// É o que permite que uma aba já aberta perceba sozinha que existe uma
+// versão mais nova no ar, e se ofereça pra atualizar — sem precisar que
+// a pessoa lembre de fechar e abrir a aba de novo.
+const RCC_APP_VERSION = "2026-09-04-01";
 const RCC_LOGO_B64 = "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";
 
 /* ---------- Conexão com o Supabase ---------- */
@@ -5722,12 +5729,45 @@ async function bootApp(){
   if(usersListOverlayEl) usersListOverlayEl.addEventListener("click", e => { if(e.target.id === "usersListOverlay") closeUsersListModal(); });
 
   subscribeToLiveUpdates();
+  setTimeout(checkForNewVersion, 15000); // uma checagem inicial, 15s depois de carregar
 }
 
 // ---------- Atualização em tempo real (Supabase Realtime) ----------
 // Sempre que ALGUÉM salvar uma edição (em qualquer computador/celular),
 // o Supabase avisa todo mundo que está com o site aberto nesse exato
 // momento, e a tela se atualiza sozinha — sem precisar apertar F5.
+// ---------- Detecção automática de versão nova (auto-atualização) ----------
+// Resolve o problema de uma aba ficar aberta rodando um código antigo
+// sem ninguém perceber: de tempos em tempos, e sempre que chega uma
+// atualização em tempo real, a página busca uma cópia fresca de si
+// mesma (ignorando qualquer cache) só pra conferir o número da versão.
+// Se for diferente da que está rodando agora, mostra um aviso convidando
+// a pessoa a atualizar com um clique — sem fazer isso sozinho, pra não
+// interromper ninguém no meio de uma edição sem avisar.
+async function checkForNewVersion(){
+  try{
+    const resp = await fetch(location.pathname + "?_v=" + Date.now(), { cache: "no-store" });
+    if(!resp.ok) return;
+    const html = await resp.text();
+    const m = html.match(/RCC_APP_VERSION\s*=\s*"([^"]+)"/);
+    if(m && m[1] && m[1] !== RCC_APP_VERSION){
+      showNewVersionBanner();
+    }
+  }catch(e){
+    // Silencioso de propósito — se a checagem falhar (ex: sem internet
+    // no momento), não faz sentido incomodar ninguém por causa disso.
+  }
+}
+
+function showNewVersionBanner(){
+  if(document.getElementById("newVersionBanner")) return; // já está mostrando
+  const banner = document.createElement("div");
+  banner.id = "newVersionBanner";
+  banner.textContent = "🔄 Existe uma versão mais nova deste sistema — clique aqui pra atualizar agora.";
+  banner.onclick = () => location.reload();
+  document.body.appendChild(banner);
+}
+
 function subscribeToLiveUpdates(){
   try{
     db.channel("rcc_overrides_live")
@@ -5740,12 +5780,20 @@ function subscribeToLiveUpdates(){
           applyLiveSnapshot(novoData);
           refreshCurrentScreen();
           showLiveUpdateToast();
+          // Aproveita esse mesmo momento (algo mudou) pra também conferir
+          // se existe uma versão nova do próprio código publicada.
+          checkForNewVersion();
         }
       )
       .subscribe();
   }catch(e){
     console.error("Não foi possível ligar a atualização em tempo real:", e.message);
   }
+
+  // Checagem periódica, independente de qualquer edição acontecer —
+  // cobre o caso de alguém deixar a aba aberta por muito tempo sem que
+  // ninguém mexa em nada, mas uma atualização tenha sido publicada.
+  setInterval(checkForNewVersion, 3 * 60 * 1000); // a cada 3 minutos
 }
 
 // Usada tanto pelo carregamento inicial (loadOverrides) quanto pelas
