@@ -5343,10 +5343,30 @@ function extractCodigoFromItem(it){
 function editItemPrompt(sec, it){
   const title = prompt("Título do item:", it.title);
   if(title === null) return;
-  const bodyHtml = prompt("Conteúdo do item (HTML):", it.body);
-  if(bodyHtml === null) return;
+
+  // A maioria dos itens simples (tipo "90 dias corridos") é só um texto
+  // dentro de <p class="fact">...</p>. Pra esses casos, mostra só o
+  // texto puro pra editar — sem a pessoa precisar ver ou mexer nas tags
+  // HTML por trás. Só cai no modo "HTML cru" se o conteúdo for mais
+  // complexo do que esse formato simples (múltiplos parágrafos, listas,
+  // negrito no meio do texto, etc.).
+  const simplesMatch = /^<p class="fact">([\s\S]*)<\/p>$/.exec((it.body || "").trim());
+  let novoBody;
+  if(simplesMatch){
+    const textoAtual = simplesMatch[1];
+    const textoNovo = prompt("Conteúdo:", textoAtual);
+    if(textoNovo === null) return;
+    const escapado = textoNovo
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    novoBody = '<p class="fact">' + escapado + "</p>";
+  } else {
+    const bodyHtml = prompt("Conteúdo do item (HTML — esse item usa formatação mais complexa):", it.body);
+    if(bodyHtml === null) return;
+    novoBody = bodyHtml;
+  }
+
   it.title = title.trim() || it.title;
-  it.body = bodyHtml;
+  it.body = novoBody;
   saveOverrides();
   render();
 }
@@ -5566,6 +5586,31 @@ function closeConveniosAtendidos(){
 }
 
 async function initApp(){
+  // ANTES de qualquer outra coisa: confere se essa é realmente a versão
+  // mais nova publicada. Se não for, recarrega a página sozinha, uma
+  // única vez — pra ninguém nunca mais abrir o sistema e ver dado
+  // desatualizado, nem por um segundo, mesmo numa aba que já estava
+  // aberta há um tempo. Usa sessionStorage só pra garantir que isso
+  // nunca vire um loop infinito de recarregar, mesmo se essa checagem
+  // der algum problema.
+  try{
+    if(!sessionStorage.getItem("rccVersionChecked")){
+      sessionStorage.setItem("rccVersionChecked", "1");
+      const resp = await fetch(location.pathname + "?_v=" + Date.now(), { cache: "no-store" });
+      if(resp.ok){
+        const html = await resp.text();
+        const m = html.match(/RCC_APP_VERSION\s*=\s*"([^"]+)"/);
+        if(m && m[1] && m[1] !== RCC_APP_VERSION){
+          location.reload();
+          return; // não continua carregando essa versão velha
+        }
+      }
+    }
+  }catch(e){
+    // Se a checagem falhar (ex: sem internet nesse instante), segue o
+    // carregamento normal em vez de travar a pessoa numa tela em branco.
+  }
+
   // Preenche a logo da tela de bloqueio antes de qualquer coisa, pra já
   // aparecer bonita mesmo pra quem ainda não logou.
   const gateLogoEl = document.getElementById("authGateLogoImg");
