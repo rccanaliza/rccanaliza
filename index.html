@@ -2344,6 +2344,14 @@ function updateChipStyles(){
 }
 
 function render(){
+  // Sempre busca a versão mais atual dos dados desse convênio na hora
+  // de desenhar a tela — igual a Tabela de Valores já fazia. Antes,
+  // "DATA" só era atualizada no momento de ENTRAR no convênio, então
+  // uma edição feita depois (por outra pessoa, ou tempo real) não
+  // aparecia até a pessoa sair e entrar de novo no convênio.
+  if(currentConvenioId && CONVENIO_DATA[currentConvenioId]){
+    DATA = CONVENIO_DATA[currentConvenioId];
+  }
   updateChipStyles();
   const query = searchInput.value.trim();
   const nq = normalize(query);
@@ -4885,6 +4893,12 @@ function toggleEditMode(){
 }
 
 /* ---------- Login (Supabase Auth) — obrigatório pra todo mundo ---------- */
+// Fica "true" só entre o momento em que detectamos um link de
+// confirmação/convite e o momento em que a pessoa realmente termina de
+// fazer login digitando e-mail + senha provisória — é o que decide se,
+// depois do login, mostramos a tela de criar senha nova.
+let pendingSetPasswordAfterLogin = false;
+
 async function doLogin(){
   const emailEl = document.getElementById("authEmail");
   const passEl = document.getElementById("authPassword");
@@ -4908,6 +4922,16 @@ async function doLogin(){
     }
     applyUserSession(data.user);
     hideAuthGate();
+    // Se essa pessoa chegou até aqui vinda de um link de confirmação de
+    // e-mail (e não de um login espontâneo), obrigamos a criar uma senha
+    // nova antes de liberar o resto do sistema — assim, só o clique no
+    // link não basta pra entrar; ela precisa também saber a senha
+    // provisória, igual um login de verdade.
+    if(pendingSetPasswordAfterLogin){
+      pendingSetPasswordAfterLogin = false;
+      showSetPasswordGate();
+      return;
+    }
     await bootApp();
   }catch(e){
     if(errEl){ errEl.textContent = "Falha de conexão: " + e.message; errEl.style.display = "block"; }
@@ -4934,6 +4958,60 @@ function closeCreateUserModal(){
   const overlay = document.getElementById("createUserOverlay");
   if(overlay) overlay.style.display = "none";
 }
+
+/* ---------- Trocar senha (qualquer pessoa logada, a qualquer momento) ---------- */
+function openChangePasswordModal(){
+  const overlay = document.getElementById("changePasswordOverlay");
+  document.getElementById("cpNewPassword").value = "";
+  document.getElementById("cpNewPasswordConfirm").value = "";
+  const errEl = document.getElementById("changePasswordError");
+  const okEl = document.getElementById("changePasswordSuccess");
+  if(errEl) errEl.style.display = "none";
+  if(okEl) okEl.style.display = "none";
+  if(overlay) overlay.style.display = "flex";
+  setTimeout(() => { document.getElementById("cpNewPassword")?.focus(); }, 50);
+}
+
+function closeChangePasswordModal(){
+  const overlay = document.getElementById("changePasswordOverlay");
+  if(overlay) overlay.style.display = "none";
+}
+
+async function submitChangePassword(){
+  const senha = document.getElementById("cpNewPassword").value || "";
+  const confirmacao = document.getElementById("cpNewPasswordConfirm").value || "";
+  const errEl = document.getElementById("changePasswordError");
+  const okEl = document.getElementById("changePasswordSuccess");
+  const btnEl = document.getElementById("changePasswordSubmitBtn");
+
+  if(errEl) errEl.style.display = "none";
+  if(okEl) okEl.style.display = "none";
+  if(senha.length < 6){
+    if(errEl){ errEl.textContent = "A senha precisa ter pelo menos 6 caracteres."; errEl.style.display = "block"; }
+    return;
+  }
+  if(senha !== confirmacao){
+    if(errEl){ errEl.textContent = "As duas senhas digitadas não são iguais."; errEl.style.display = "block"; }
+    return;
+  }
+
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = "Salvando..."; }
+  try{
+    const { error } = await db.auth.updateUser({ password: senha });
+    if(error){
+      if(errEl){ errEl.textContent = "Não foi possível salvar: " + error.message; errEl.style.display = "block"; }
+      return;
+    }
+    if(okEl){ okEl.textContent = "Senha alterada com sucesso!"; okEl.style.display = "block"; }
+    document.getElementById("cpNewPassword").value = "";
+    document.getElementById("cpNewPasswordConfirm").value = "";
+  }catch(e){
+    if(errEl){ errEl.textContent = "Falha de conexão: " + e.message; errEl.style.display = "block"; }
+  }finally{
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = "Salvar nova senha"; }
+  }
+}
+
 
 async function submitCreateUser(){
   const nome = (document.getElementById("cuNome").value || "").trim();
@@ -5492,42 +5570,50 @@ async function initApp(){
 
   // Verifica se a pessoa acabou de clicar num link de confirmação/convite
   // vindo do e-mail. O Supabase pode mandar esse link em dois formatos
-  // diferentes — reconhecemos os dois, pra não depender de qual deles
-  // está em uso no momento:
+  // diferentes — reconhecemos os dois. IMPORTANTE: em vez de deixar isso
+  // logar a pessoa automaticamente (o que só prova que ela tem acesso ao
+  // e-mail), a gente DESFAZ esse login automático de propósito, e pede
+  // pra ela digitar e-mail + senha provisória — igual um login de
+  // verdade. Só depois disso é que aparece a tela de criar senha nova.
+  let vindoDeConfirmacao = false;
+
   // 1) formato mais novo: ...?code=xxxxx (precisa "trocar" o código por uma sessão)
   try{
     const searchParams = new URLSearchParams(location.search);
     const authCode = searchParams.get("code");
     if(authCode){
-      const { data, error } = await db.auth.exchangeCodeForSession(authCode);
+      const { error } = await db.auth.exchangeCodeForSession(authCode);
       history.replaceState(null, "", location.pathname);
-      if(!error && data && data.session && data.session.user){
-        applyUserSession(data.session.user);
-        showSetPasswordGate();
-        return;
-      }
+      if(!error) vindoDeConfirmacao = true;
     }
   }catch(e){
     console.error("Erro ao processar link de confirmação (formato novo):", e.message);
   }
 
-  // Ninguém vê nenhuma tela do site (nem pra pesquisar) sem logar antes.
   // 2) formato mais antigo: ...#access_token=xxx&type=signup (sessão já vem pronta)
+  if(!vindoDeConfirmacao){
+    const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
+    if(hashParams.get("type") === "signup" || hashParams.get("type") === "invite"){
+      history.replaceState(null, "", location.pathname + location.search);
+      vindoDeConfirmacao = true;
+    }
+  }
+
+  if(vindoDeConfirmacao){
+    // Desfaz o login automático que o Supabase acabou de fazer — a
+    // pessoa vai precisar provar que sabe a senha provisória, digitando
+    // ela na tela de login normal.
+    try{ await db.auth.signOut(); }catch(e){}
+    pendingSetPasswordAfterLogin = true;
+    showAuthGate();
+    return;
+  }
+
+  // Ninguém vê nenhuma tela do site (nem pra pesquisar) sem logar antes.
   try{
     const { data: { session } } = await db.auth.getSession();
     if(session && session.user){
       applyUserSession(session.user);
-      // Se a pessoa acabou de chegar pelo link de confirmação do e-mail
-      // (não por um login normal digitando e-mail/senha), pede pra ela
-      // criar a própria senha antes de liberar o resto do sistema — assim
-      // ela sai sabendo a senha dela, em vez de só ficar logada até sair
-      // da conta e travar sem saber como voltar a entrar.
-      const hashParams = new URLSearchParams(location.hash.replace(/^#/, ""));
-      if(hashParams.get("type") === "signup" || hashParams.get("type") === "invite"){
-        history.replaceState(null, "", location.pathname + location.search);
-        showSetPasswordGate();
-        return;
-      }
       hideAuthGate();
       await bootApp();
       return;
@@ -5629,6 +5715,8 @@ async function bootApp(){
 
   const createUserOverlayEl = document.getElementById("createUserOverlay");
   if(createUserOverlayEl) createUserOverlayEl.addEventListener("click", e => { if(e.target.id === "createUserOverlay") closeCreateUserModal(); });
+  const changePasswordOverlayEl = document.getElementById("changePasswordOverlay");
+  if(changePasswordOverlayEl) changePasswordOverlayEl.addEventListener("click", e => { if(e.target.id === "changePasswordOverlay") closeChangePasswordModal(); });
 
   const usersListOverlayEl = document.getElementById("usersListOverlay");
   if(usersListOverlayEl) usersListOverlayEl.addEventListener("click", e => { if(e.target.id === "usersListOverlay") closeUsersListModal(); });
@@ -5781,6 +5869,27 @@ if(document.readyState === "loading"){
   <button onclick="doLogout()">🚪 Sair da conta</button>
 </div>
 
+<div id="changePasswordOverlay" class="login-overlay" aria-hidden="true">
+  <div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="changePasswordTitle">
+    <h2 id="changePasswordTitle">Trocar senha</h2>
+    <p class="login-sub">Escolha uma nova senha para entrar da próxima vez.</p>
+    <div class="login-field">
+      <label for="cpNewPassword">Nova senha</label>
+      <input id="cpNewPassword" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="login-field">
+      <label for="cpNewPasswordConfirm">Confirme a senha</label>
+      <input id="cpNewPasswordConfirm" type="password" autocomplete="new-password" placeholder="Digite a senha de novo">
+    </div>
+    <div id="changePasswordError" class="login-error" style="display:none;"></div>
+    <div id="changePasswordSuccess" class="login-error" style="display:none; background:rgba(47,184,102,.12); color:#1e8449;"></div>
+    <div class="login-actions">
+      <button type="button" class="login-cancel" onclick="closeChangePasswordModal()">Fechar</button>
+      <button type="button" class="login-submit" id="changePasswordSubmitBtn" onclick="submitChangePassword()">Salvar nova senha</button>
+    </div>
+  </div>
+</div>
+
 <div id="createUserOverlay" class="login-overlay" aria-hidden="true">
   <div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="createUserTitle">
     <h2 id="createUserTitle">Novo usuário</h2>
@@ -5865,6 +5974,7 @@ if(document.readyState === "loading"){
 
 <div id="userBar">
   <span id="userBarName"></span>
+  <button type="button" onclick="openChangePasswordModal()">Trocar senha</button>
   <button type="button" onclick="doLogout()">Sair</button>
 </div>
 
