@@ -4804,7 +4804,7 @@ let currentUser = null; // {id, email, nome, isAdmin} — preenchido após login
 // É o que permite que uma aba já aberta perceba sozinha que existe uma
 // versão mais nova no ar, e se ofereça pra atualizar — sem precisar que
 // a pessoa lembre de fechar e abrir a aba de novo.
-const RCC_APP_VERSION = "2026-09-04-04";
+const RCC_APP_VERSION = "2026-09-04-05";
 const RCC_LOGO_B64 = "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";
 
 /* ---------- Conexão com o Supabase ---------- */
@@ -4904,7 +4904,8 @@ async function saveOverrides(){
     equipamentosCT: EQUIPAMENTOS_CT,
     equipamentosNotes: EQUIPAMENTOS_NOTES,
     equipamentosPreparos: EQUIPAMENTOS_PREPAROS,
-    codigosExames: CODIGOS_EXAMES
+    codigosExames: CODIGOS_EXAMES,
+    conveniosAtendidos: CONVENIOS_ATENDIDOS
   };
   try{
     // .upsert(...) = "update" se a linha já existir, "insert" se não existir.
@@ -5582,10 +5583,18 @@ function renderConveniosAtendidosList(){
   listEl.innerHTML = filtrados.map(c => {
     const temPagina = !!c.convenioId;
     const nomeHtml = q ? highlight(c.nome, document.getElementById("conveniosAtendidosSearch").value.trim()) : c.nome;
+    const realIdx = CONVENIOS_ATENDIDOS.indexOf(c);
+    const botoesAdmin = editMode ? `
+        <button type="button" class="conv-atendido-editar" data-idx="${realIdx}" style="font-size:11.5px; font-weight:700; color:var(--ink-soft); background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:4px 8px; cursor:pointer; white-space:nowrap;">✏️ Editar</button>
+        <button type="button" class="conv-atendido-excluir" data-idx="${realIdx}" style="font-size:11.5px; font-weight:700; color:#c0392b; background:#FDEDEC; border:1px solid #F5C6CB; border-radius:8px; padding:4px 8px; cursor:pointer; white-space:nowrap;">🗑️ Excluir</button>
+    ` : "";
     return `
-      <li style="padding:10px 2px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <li style="padding:10px 2px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
         <span style="font-size:14px; color:var(--ink);">${nomeHtml}</span>
-        ${temPagina ? `<button type="button" class="conv-atendido-ver" data-conv-id="${c.convenioId}" style="font-size:12px; font-weight:700; color:var(--cyan); background:none; border:none; cursor:pointer; white-space:nowrap;">Ver detalhes →</button>` : ""}
+        <div style="display:flex; gap:6px; align-items:center;">
+          ${temPagina ? `<button type="button" class="conv-atendido-ver" data-conv-id="${c.convenioId}" style="font-size:12px; font-weight:700; color:var(--cyan); background:none; border:none; cursor:pointer; white-space:nowrap;">Ver detalhes →</button>` : ""}
+          ${botoesAdmin}
+        </div>
       </li>
     `;
   }).join("");
@@ -5603,6 +5612,66 @@ function renderConveniosAtendidosList(){
       }
     };
   });
+  listEl.querySelectorAll(".conv-atendido-editar").forEach(btn => {
+    btn.onclick = () => editConvenioAtendidoPrompt(CONVENIOS_ATENDIDOS[parseInt(btn.dataset.idx, 10)]);
+  });
+  listEl.querySelectorAll(".conv-atendido-excluir").forEach(btn => {
+    btn.onclick = () => deleteConvenioAtendidoPrompt(CONVENIOS_ATENDIDOS[parseInt(btn.dataset.idx, 10)]);
+  });
+
+  const addWrap = document.getElementById("conveniosAtendidosAddWrap");
+  if(addWrap) addWrap.style.display = editMode ? "block" : "none";
+}
+
+// Pede o nome (obrigatório) e, opcionalmente, o ID de um convênio que já
+// tenha página própria no sistema — se preenchido e válido, o item ganha
+// o botão "Ver detalhes →" apontando pra essa página.
+function pedirConvenioIdValido(valorAtual){
+  const idsValidos = CONVENIOS.map(c => c.id).join(", ");
+  const convenioId = prompt(
+    "ID do convênio com página própria (opcional — deixe em branco se não tiver).\nOpções existentes: " + idsValidos,
+    valorAtual || ""
+  );
+  if(convenioId === null) return undefined; // cancelou
+  const idFinal = convenioId.trim();
+  if(!idFinal) return null; // sem página própria, de propósito
+  const existe = CONVENIOS.some(c => c.id === idFinal);
+  if(!existe){
+    alert('Esse ID não corresponde a nenhum convênio com página própria — vou salvar sem o link "Ver detalhes".');
+    return null;
+  }
+  return idFinal;
+}
+
+function addConvenioAtendidoPrompt(){
+  const nome = prompt("Nome do convênio:");
+  if(!nome || !nome.trim()) return;
+  const convenioId = pedirConvenioIdValido("");
+  if(convenioId === undefined) return; // cancelou no segundo prompt
+  CONVENIOS_ATENDIDOS.push({ nome: nome.trim(), convenioId });
+  saveOverrides();
+  renderConveniosAtendidosList();
+}
+
+function editConvenioAtendidoPrompt(item){
+  if(!item) return;
+  const nome = prompt("Nome do convênio:", item.nome);
+  if(nome === null) return;
+  const convenioId = pedirConvenioIdValido(item.convenioId);
+  if(convenioId === undefined) return;
+  item.nome = nome.trim() || item.nome;
+  item.convenioId = convenioId;
+  saveOverrides();
+  renderConveniosAtendidosList();
+}
+
+function deleteConvenioAtendidoPrompt(item){
+  if(!item) return;
+  if(!confirm(`Excluir "${item.nome}" da lista de convênios atendidos?`)) return;
+  const idx = CONVENIOS_ATENDIDOS.indexOf(item);
+  if(idx > -1) CONVENIOS_ATENDIDOS.splice(idx, 1);
+  saveOverrides();
+  renderConveniosAtendidosList();
 }
 
 function openConveniosAtendidos(){
@@ -5805,6 +5874,8 @@ async function bootApp(){
   const conveniosAtendidosCloseBtnEl = document.getElementById("conveniosAtendidosCloseBtn");
   const conveniosAtendidosSearchEl = document.getElementById("conveniosAtendidosSearch");
   if(conveniosAtendidosBtnEl) conveniosAtendidosBtnEl.onclick = openConveniosAtendidos;
+  const conveniosAtendidosAddBtnEl = document.getElementById("conveniosAtendidosAddBtn");
+  if(conveniosAtendidosAddBtnEl) conveniosAtendidosAddBtnEl.onclick = addConvenioAtendidoPrompt;
   if(conveniosAtendidosCloseBtnEl) conveniosAtendidosCloseBtnEl.onclick = closeConveniosAtendidos;
   if(conveniosAtendidosOverlayEl) conveniosAtendidosOverlayEl.addEventListener("click", e => { if(e.target.id === "conveniosAtendidosOverlay") closeConveniosAtendidos(); });
   if(conveniosAtendidosSearchEl) conveniosAtendidosSearchEl.addEventListener("input", renderConveniosAtendidosList);
@@ -5938,6 +6009,13 @@ function applyLiveSnapshot(data){
       if(idx >= 0) EQUIPAMENTOS_PREPAROS[idx] = p; else EQUIPAMENTOS_PREPAROS.push(p);
     });
   }
+  if(Array.isArray(data.conveniosAtendidos)){
+    data.conveniosAtendidos.forEach(c => {
+      if(!c || !c.nome) return;
+      const idx = CONVENIOS_ATENDIDOS.findIndex(x => x.nome === c.nome);
+      if(idx >= 0) CONVENIOS_ATENDIDOS[idx] = c; else CONVENIOS_ATENDIDOS.push(c);
+    });
+  }
 }
 
 function showLiveUpdateToast(){
@@ -5974,6 +6052,9 @@ if(document.readyState === "loading"){
     </div>
     <div id="conveniosAtendidosResultCount" style="font-size:12px; color:var(--ink-soft); margin-bottom:6px;"></div>
     <ul id="conveniosAtendidosList" style="list-style:none; margin:0; padding:0; max-height:340px; overflow-y:auto; border-top:1px solid var(--line);"></ul>
+    <div id="conveniosAtendidosAddWrap" style="display:none; text-align:center; padding-top:10px;">
+      <button type="button" id="conveniosAtendidosAddBtn" style="font-size:13px; font-weight:700; color:var(--cyan); background:none; border:1px dashed var(--cyan); border-radius:8px; padding:8px 14px; cursor:pointer;">+ Novo convênio</button>
+    </div>
     <div class="cem-actions" style="margin-top:14px;">
       <button type="button" class="cem-cancel" id="conveniosAtendidosCloseBtn">Fechar</button>
     </div>
