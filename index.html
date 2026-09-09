@@ -1133,7 +1133,11 @@
 .login-submit{background:var(--cyan);color:var(--navy);}
 #authGate{position:fixed;inset:0;background:var(--navy);display:flex;align-items:center;justify-content:center;padding:18px;z-index:40000;}
 #setPasswordGate{position:fixed;inset:0;background:var(--navy);display:none;align-items:center;justify-content:center;padding:18px;z-index:41000;}
+#forgotPasswordGate{position:fixed;inset:0;background:var(--navy);display:none;align-items:center;justify-content:center;padding:18px;z-index:41000;}
+#passwordChangedGate{position:fixed;inset:0;background:var(--navy);display:none;align-items:center;justify-content:center;padding:18px;z-index:41000;}
 #setPasswordGate .auth-box{width:min(380px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:28px 24px;text-align:center;}
+#forgotPasswordGate .auth-box{width:min(380px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:28px 24px;text-align:center;}
+#passwordChangedGate .auth-box{width:min(380px,100%);background:#fff;border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.4);padding:28px 24px;text-align:center;}
 #setPasswordGate .auth-logo{width:56px;height:56px;border-radius:12px;margin:0 auto 14px;display:block;}
 #setPasswordGate .login-field{text-align:left;}
 #setPasswordGate .login-actions{justify-content:stretch;}
@@ -1143,6 +1147,14 @@
 #authGate .login-field{text-align:left;}
 #authGate .login-actions{justify-content:stretch;}
 #authGate .login-submit{flex:1;padding:11px 14px;}
+#forgotPasswordGate .auth-logo{width:56px;height:56px;border-radius:12px;margin:0 auto 14px;display:block;}
+#forgotPasswordGate .login-field{text-align:left;}
+#forgotPasswordGate .login-actions{justify-content:stretch;}
+#forgotPasswordGate .login-submit{flex:1;padding:11px 14px;}
+#passwordChangedGate .auth-logo{width:56px;height:56px;border-radius:12px;margin:0 auto 14px;display:block;}
+#passwordChangedGate .login-field{text-align:left;}
+#passwordChangedGate .login-actions{justify-content:stretch;}
+#passwordChangedGate .login-submit{flex:1;padding:11px 14px;}
 #userBar{position:fixed;top:10px;right:12px;z-index:9000;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 14px;display:none;align-items:center;gap:10px;font-size:12.5px;color:var(--ink-soft);box-shadow:0 2px 10px rgba(0,0,0,.12);}
 #newVersionBanner{position:fixed;top:0;left:0;right:0;background:#1E2761;color:#fff;padding:10px 16px;text-align:center;font-size:13.5px;font-weight:600;z-index:60000;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.2);}
 #newVersionBanner:hover{background:#2a3a8a;}
@@ -1321,12 +1333,11 @@
       <input id="authPassword" type="password" autocomplete="current-password" placeholder="Digite a senha">
     </div>
     <div id="authError" class="login-error" style="display:none;"></div>
-    <div id="authForgotSuccess" class="login-error" style="display:none; background:rgba(47,184,102,.12); color:#1e8449;"></div>
     <div class="login-actions">
       <button type="button" class="login-submit" id="authSubmitBtn" onclick="doLogin()">Entrar</button>
     </div>
     <p style="margin:14px 0 0; text-align:center;">
-      <button type="button" id="authForgotBtn" onclick="forgotPasswordPrompt()" style="background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer;">Esqueci minha senha</button>
+      <button type="button" id="authForgotBtn" onclick="showForgotPasswordGate()" style="background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer;">Esqueci minha senha</button>
     </p>
   </div>
 </div>
@@ -1350,6 +1361,38 @@
     </div>
   </div>
 </div>
+
+<div id="forgotPasswordGate" aria-hidden="true">
+  <div class="auth-box" role="dialog" aria-modal="true" aria-labelledby="forgotPasswordTitle">
+    <img class="auth-logo" id="forgotPasswordLogoImg" alt="Logo RCC Diagnósticos por Imagem">
+    <h2 id="forgotPasswordTitle">Esqueci minha senha</h2>
+    <p class="login-sub">Digite o e-mail da sua conta. Se ele tiver um cadastro, enviaremos um link para você criar uma senha nova.</p>
+    <div class="login-field">
+      <label for="forgotEmail">E-mail</label>
+      <input id="forgotEmail" type="email" autocomplete="username" placeholder="seuemail@exemplo.com">
+    </div>
+    <div id="forgotPasswordError" class="login-error" style="display:none;"></div>
+    <div id="forgotPasswordSuccessMsg" class="login-error" style="display:none; background:rgba(47,184,102,.12); color:#1e8449;"></div>
+    <div class="login-actions">
+      <button type="button" class="login-submit" id="forgotPasswordSubmitBtn" onclick="submitForgotPassword()">Enviar link de recuperação</button>
+    </div>
+    <p style="margin:14px 0 0; text-align:center;">
+      <button type="button" onclick="closeForgotPasswordGate()" style="background:none; border:none; color:var(--ink-soft); font-size:12.5px; text-decoration:underline; cursor:pointer;">Voltar para o login</button>
+    </p>
+  </div>
+</div>
+
+<div id="passwordChangedGate" aria-hidden="true">
+  <div class="auth-box" role="dialog" aria-modal="true" aria-labelledby="passwordChangedTitle">
+    <img class="auth-logo" id="passwordChangedLogoImg" alt="Logo RCC Diagnósticos por Imagem">
+    <h2 id="passwordChangedTitle">Senha alterada!</h2>
+    <p class="login-sub">Sua senha foi salva com sucesso. Use-a para entrar na próxima vez.</p>
+    <div class="login-actions">
+      <button type="button" class="login-submit" onclick="goToLoginFromSuccess()">Voltar para o login</button>
+    </div>
+  </div>
+</div>
+
 
 
 <header>
@@ -4865,7 +4908,7 @@ let currentUser = null; // {id, email, nome, isAdmin} — preenchido após login
 // É o que permite que uma aba já aberta perceba sozinha que existe uma
 // versão mais nova no ar, e se ofereça pra atualizar — sem precisar que
 // a pessoa lembre de fechar e abrir a aba de novo.
-const RCC_APP_VERSION = "2026-09-09-01";
+const RCC_APP_VERSION = "2026-09-09-02";
 const RCC_LOGO_B64 = "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";
 
 /* ---------- Conexão com o Supabase ---------- */
@@ -5021,19 +5064,40 @@ let pendingSetPasswordAfterLogin = false;
 
 // "Esqueci minha senha" — manda um e-mail com link pra pessoa definir
 // uma senha nova, sem precisar saber a antiga.
-async function forgotPasswordPrompt(){
-  const errEl = document.getElementById("authError");
-  const okEl = document.getElementById("authForgotSuccess");
-  const btnEl = document.getElementById("authForgotBtn");
+// Abre a tela dedicada de "esqueci minha senha" — em vez da caixinha
+// nativa do navegador, é uma tela com o mesmo visual do resto do site.
+function showForgotPasswordGate(){
+  hideAuthGate();
+  const gate = document.getElementById("forgotPasswordGate");
+  const logoEl = document.getElementById("forgotPasswordLogoImg");
+  if(logoEl) logoEl.src = "data:image/jpeg;base64," + RCC_LOGO_B64;
+  const emailField = document.getElementById("forgotEmail");
+  emailField.value = (document.getElementById("authEmail").value || "").trim();
+  document.getElementById("forgotPasswordError").style.display = "none";
+  document.getElementById("forgotPasswordSuccessMsg").style.display = "none";
+  const btnEl = document.getElementById("forgotPasswordSubmitBtn");
+  btnEl.style.display = "";
+  btnEl.textContent = "Enviar link de recuperação";
+  if(gate) gate.style.display = "flex";
+  setTimeout(() => emailField?.focus(), 60);
+}
+
+function closeForgotPasswordGate(){
+  const gate = document.getElementById("forgotPasswordGate");
+  if(gate) gate.style.display = "none";
+  showAuthGate();
+}
+
+async function submitForgotPassword(){
+  const errEl = document.getElementById("forgotPasswordError");
+  const okEl = document.getElementById("forgotPasswordSuccessMsg");
+  const btnEl = document.getElementById("forgotPasswordSubmitBtn");
   if(errEl) errEl.style.display = "none";
   if(okEl) okEl.style.display = "none";
 
-  // Sempre pede pra confirmar o e-mail antes de enviar — mesmo que já
-  // tenha algo digitado no campo (ou preenchido sozinho pelo navegador),
-  // a pessoa precisa ver e confirmar antes do envio acontecer de verdade.
-  const emailAtual = (document.getElementById("authEmail").value || "").trim();
-  const email = (prompt("Digite o e-mail da sua conta:", emailAtual) || "").trim();
+  const email = (document.getElementById("forgotEmail").value || "").trim();
   if(!email){
+    if(errEl){ errEl.textContent = "Digite um e-mail."; errEl.style.display = "block"; }
     return;
   }
 
@@ -5047,14 +5111,32 @@ async function forgotPasswordPrompt(){
       return;
     }
     if(okEl){
-      okEl.textContent = "Se esse e-mail tiver uma conta, um link pra criar uma senha nova foi enviado. Confira sua caixa de entrada.";
+      okEl.textContent = "Se esse e-mail tiver uma conta, um link para criar uma senha nova foi enviado. Confira sua caixa de entrada.";
       okEl.style.display = "block";
     }
+    // Esconde o botão de enviar depois do sucesso, pra não reenviar sem querer.
+    if(btnEl) btnEl.style.display = "none";
+    return;
   }catch(e){
     if(errEl){ errEl.textContent = "Falha de conexão: " + e.message; errEl.style.display = "block"; }
   }finally{
-    if(btnEl){ btnEl.disabled = false; btnEl.textContent = "Esqueci minha senha"; }
+    if(btnEl && btnEl.style.display !== "none"){ btnEl.disabled = false; btnEl.textContent = "Enviar link de recuperação"; }
   }
+}
+
+// Tela de confirmação depois de salvar a senha nova — fica esperando a
+// pessoa clicar, em vez de já mandar de volta pro login sozinho.
+function showPasswordChangedGate(){
+  const gate = document.getElementById("passwordChangedGate");
+  const logoEl = document.getElementById("passwordChangedLogoImg");
+  if(logoEl) logoEl.src = "data:image/jpeg;base64," + RCC_LOGO_B64;
+  if(gate) gate.style.display = "flex";
+}
+
+function goToLoginFromSuccess(){
+  const gate = document.getElementById("passwordChangedGate");
+  if(gate) gate.style.display = "none";
+  showAuthGate();
 }
 
 async function doLogin(){
@@ -5958,16 +6040,12 @@ async function submitNewPassword(){
       return;
     }
     hideSetPasswordGate();
-    // Depois de definir a senha nova, desloga e volta pra tela de login —
-    // a pessoa confirma que a senha nova funciona fazendo login com ela,
-    // em vez de continuar automaticamente logada.
+    // Depois de definir a senha nova, desloga (a pessoa confirma que a
+    // senha nova funciona fazendo login com ela depois) e mostra uma tela
+    // de confirmação dedicada, esperando a pessoa clicar pra ir pro login
+    // — em vez de já redirecionar sozinho.
     try{ await db.auth.signOut(); }catch(e){}
-    const okEl = document.getElementById("authForgotSuccess");
-    if(okEl){
-      okEl.textContent = "Senha alterada com sucesso! Faça login com sua nova senha.";
-      okEl.style.display = "block";
-    }
-    showAuthGate();
+    showPasswordChangedGate();
   }catch(e){
     if(errEl){ errEl.textContent = "Falha de conexão: " + e.message; errEl.style.display = "block"; }
   }finally{
