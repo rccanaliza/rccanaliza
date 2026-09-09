@@ -826,11 +826,11 @@
     color:var(--ink-soft);
     font-size:13px;
   }
-
+{
     text-align:center;
     padding: 60px 20px;
     color: var(--ink-soft);
-  }
+}
   .empty svg{ opacity:.4; margin-bottom: 10px; }
 
   footer{
@@ -4886,6 +4886,12 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     // último, sem digitar senha nenhuma. sessionStorage some assim que
     // a aba/navegador é fechado — cada pessoa precisa logar de novo.
     storage: window.sessionStorage,
+    // IMPORTANTE: desliga a detecção automática de sessão a partir do
+    // link (hash/query) — sem isso, o Supabase às vezes loga a pessoa
+    // sozinho antes do nosso próprio código conseguir checar se é um
+    // link de recuperação de senha, fazendo ela cair direto na página
+    // inicial em vez de ver a tela de criar senha nova.
+    detectSessionInUrl: false,
   },
 });
 const OVERRIDES_ROW_ID = "main"; // sempre a mesma linha única na tabela
