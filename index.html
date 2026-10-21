@@ -3965,6 +3965,7 @@ function copyQuoteText(){
   const text = buildQuoteText();
   const copyBtn = document.getElementById("quoteCopyBtn");
   const done = () => {
+    registrarOrcamento("Texto copiado");
     const original = copyBtn.textContent;
     copyBtn.textContent = "Copiado!";
     setTimeout(() => { copyBtn.textContent = original; }, 1600);
@@ -3990,6 +3991,7 @@ function fallbackCopy(text, cb){
 
 function clearQuote(){
   quoteItems = [];
+  rccOrcamentoCobrado = null;
   // Limpa também os dados do paciente (nome e CPF), para o próximo orçamento começar em branco.
   ["quotePatient","quoteCPF"].forEach(id => { const el = document.getElementById(id); if(el) el.value = ""; });
   const discountEl = document.getElementById("quoteDiscount");
@@ -4075,6 +4077,7 @@ function downloadQuoteImage(){
   generateQuoteImageBlob().then(blob => {
     restore();
     triggerBlobDownload(blob, `orcamento-rcc-${Date.now()}.jpg`);
+    registrarOrcamento("JPEG");
   }).catch(() => { restore(); alert("Não foi possível gerar a imagem. Verifique sua conexão e tente novamente."); });
 }
 
@@ -4160,6 +4163,7 @@ function downloadQuotePDF(){
     const pdfBlob = pdf.output("blob");
     restore();
     triggerBlobDownload(pdfBlob, `orcamento-rcc-${Date.now()}.pdf`);
+    registrarOrcamento("PDF");
   }).catch(() => { restore(); alert("Não foi possível gerar o PDF. Verifique sua conexão e tente novamente."); });
 }
 
@@ -4817,6 +4821,7 @@ function enterConvenio(c, fromHistory){
   updateNavButtons("convenios");
   buildChips();
   render();
+  if(!fromHistory) registrarUso("consulta_convenio", c.name);
 
   const editCodesBtn = document.getElementById("convenioEditCodesBtn");
   if(editCodesBtn){
@@ -4954,7 +4959,7 @@ let currentUser = null; // {id, email, nome, isAdmin} — preenchido após login
 // É o que permite que uma aba já aberta perceba sozinha que existe uma
 // versão mais nova no ar, e se ofereça pra atualizar — sem precisar que
 // a pessoa lembre de fechar e abrir a aba de novo.
-const RCC_APP_VERSION = "2026-10-21-01";
+const RCC_APP_VERSION = "2026-10-21-02";
 const RCC_LOGO_B64 = "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";
 
 /* ---------- Conexão com o Supabase ---------- */
@@ -5498,6 +5503,7 @@ function applyUserSession(user){
   // único e-mail fixo com esse poder.
   const meta = (user && user.user_metadata) || {};
   currentUser = { id: user.id, email: user.email, nome: rccNomeAmigavel(meta.nome || user.email), isAdmin: !!meta.admin };
+  setTimeout(rccUsoReenviarPendentes, 3000);
   editMode = currentUser.isAdmin; // admin já entra em modo edição; pode desligar depois
   const userBarEl = document.getElementById("userBar");
   const userBarNameEl = document.getElementById("userBarName");
@@ -5848,6 +5854,107 @@ function filtrarRedesBradesco(input){
 // parênteses no fim), e que pode usar "await" porque é "async".
 // Ela existe só pra podermos "esperar" loadOverrides() terminar antes
 // de seguir pro resto (ensureProasaGuia, buildConvenios, render...).
+// ---------- Registro de uso (base para cobrança por movimentação) ----------
+// Cada consulta (exame ou convênio) vale R$ 0,20 e cada orçamento emitido vale
+// R$ 0,50. Grava na tabela "rcc_uso" do Supabase: usuário, data/hora, tipo e
+// o que foi consultado. NUNCA grava nome nem CPF do paciente. Se der erro
+// (sem internet, por exemplo), guarda no navegador e tenta de novo depois —
+// e nunca atrapalha o uso normal do sistema.
+const RCC_USO_PRECOS = { consulta_exame: 0.20, consulta_convenio: 0.20, orcamento: 0.50 };
+const RCC_USO_FILA_KEY = "rccUsoPendentes";
+const RCC_USO_PAUSA_MS = 2000;   // só conta a pesquisa depois que a pessoa para de digitar
+let rccUsoUltimos = {};          // evita contar duas vezes a mesma coisa em seguida
+let rccOrcamentoCobrado = null;  // assinatura do orçamento que já foi cobrado
+
+function rccUsoLerFila(){
+  try{ return JSON.parse(localStorage.getItem(RCC_USO_FILA_KEY) || "[]"); }catch(e){ return []; }
+}
+function rccUsoSalvarFila(fila){
+  try{ localStorage.setItem(RCC_USO_FILA_KEY, JSON.stringify(fila.slice(-500))); }catch(e){}
+}
+async function rccUsoEnviar(linhas){
+  const { error } = await db.from("rcc_uso").insert(linhas);
+  return !error;
+}
+async function rccUsoReenviarPendentes(){
+  try{
+    const fila = rccUsoLerFila();
+    if(!fila.length || !currentUser) return;
+    const deste = fila.filter(l => l.user_id === currentUser.id);
+    const dosOutros = fila.filter(l => l.user_id !== currentUser.id);
+    if(!deste.length) return;
+    if(await rccUsoEnviar(deste)) rccUsoSalvarFila(dosOutros);
+  }catch(e){}
+}
+function registrarUso(tipo, detalhe, extra){
+  try{
+    if(!currentUser || !RCC_USO_PRECOS[tipo]) return;
+    const chave = tipo + "|" + (detalhe || "");
+    const agora = Date.now();
+    if(tipo !== "orcamento" && rccUsoUltimos[chave] && agora - rccUsoUltimos[chave] < 20000) return;
+    rccUsoUltimos[chave] = agora;
+    const linha = Object.assign({
+      user_id: currentUser.id,
+      usuario_nome: currentUser.nome,
+      usuario_email: currentUser.email,
+      tipo: tipo,
+      detalhe: String(detalhe || "").slice(0, 200),
+      valor_cobrado: RCC_USO_PRECOS[tipo],
+      criado_em: new Date().toISOString()
+    }, extra || {});
+    rccUsoEnviar([linha]).then(ok => {
+      if(ok){ rccUsoReenviarPendentes(); }
+      else { const f = rccUsoLerFila(); f.push(linha); rccUsoSalvarFila(f); }
+    }).catch(() => { const f = rccUsoLerFila(); f.push(linha); rccUsoSalvarFila(f); });
+  }catch(e){ /* nunca atrapalha o uso do sistema */ }
+}
+// Orçamento: só conta quando é de fato emitido (PDF, JPEG ou texto copiado).
+// Emitir o MESMO orçamento em mais de um formato conta uma vez só; se a lista
+// de exames ou o desconto mudar (ou limpar o orçamento), um novo é contado.
+function registrarOrcamento(formato){
+  try{
+    if(!quoteItems.length) return;
+    const assinatura = JSON.stringify([quoteItems.map(q => [q.procedimento, q.opcao || "", q.tabela || "", q.valor]), quoteDiscountPercent()]);
+    if(assinatura === rccOrcamentoCobrado) return;
+    rccOrcamentoCobrado = assinatura;
+    registrarUso("orcamento", formato, { qtd_itens: quoteItems.length, valor_orcamento: Math.round(quoteFinalTotal() * 100) / 100 });
+  }catch(e){}
+}
+// Pesquisas: conta 1 consulta quando a pessoa para de digitar (mín. 3 letras).
+const RCC_USO_BUSCAS = {
+  search:                 { tipo: "consulta_exame",    ctx: () => activeConvenioName || "" },
+  valoresSearch:          { tipo: "consulta_exame",    ctx: () => "Tabela de valores" },
+  codigosSearch:          { tipo: "consulta_exame",    ctx: () => "Códigos TUSS" },
+  equipamentosSearch:     { tipo: "consulta_exame",    ctx: () => "Equipamentos" },
+  preparosSearch:         { tipo: "consulta_exame",    ctx: () => "Preparos" },
+  conveniosAtendidosSearch: { tipo: "consulta_convenio", ctx: () => "Convênios atendidos" }
+};
+const rccUsoTimers = new WeakMap();
+const rccUsoUltimaBusca = new WeakMap();
+document.addEventListener("input", (e) => {
+  try{
+    const el = e.target;
+    if(!el || el.tagName !== "INPUT") return;
+    let cfg = RCC_USO_BUSCAS[el.id];
+    if(!cfg && el.classList.contains("sec-search-input")) cfg = { tipo: "consulta_exame", ctx: () => activeConvenioName || "" };
+    if(!cfg) return;
+    clearTimeout(rccUsoTimers.get(el));
+    rccUsoTimers.set(el, setTimeout(() => {
+      const termo = el.value.trim();
+      if(termo.length < 3) return;
+      const ant = rccUsoUltimaBusca.get(el);
+      // quem continua digitando a mesma pesquisa logo depois não conta de novo
+      if(ant && termo.toLowerCase().startsWith(ant.termo.toLowerCase()) && Date.now() - ant.quando < 15000){
+        rccUsoUltimaBusca.set(el, { termo, quando: Date.now() });
+        return;
+      }
+      rccUsoUltimaBusca.set(el, { termo, quando: Date.now() });
+      const ctx = cfg.ctx();
+      registrarUso(cfg.tipo, termo + (ctx ? " · " + ctx : ""));
+    }, RCC_USO_PAUSA_MS));
+  }catch(err){}
+});
+
 // ---------- Lista de convênios atendidos (busca rápida) ----------
 let conveniosAtendidosFiltro = "todos"; // todos | izabel | sandra | outros
 
