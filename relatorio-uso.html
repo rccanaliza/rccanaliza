@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório de uso — Analiza</title>
+<style>
+  :root{ --ink:#1b2430; --soft:#667085; --line:#e3e8ef; --bg:#f5f7fa; --navy:#05203B; --cyan:#1f9fb0; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  .wrap{ max-width:1080px; margin:0 auto; padding:20px 16px 60px; }
+  h1{ font-size:20px; margin:0; color:var(--navy); }
+  .top{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .card{ background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  label{ display:block; font-size:12px; color:var(--soft); margin-bottom:4px; }
+  input,select{ width:100%; padding:9px 10px; font-size:14px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); font-family:inherit; }
+  input:focus,select:focus{ outline:2px solid var(--cyan); outline-offset:0; }
+  .filtros{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; align-items:end; }
+  .acoes{ display:flex; gap:8px; }
+  .ibtn{ width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; color:var(--ink); }
+  .ibtn:hover{ border-color:var(--cyan); color:var(--cyan); }
+  .ibtn.primary{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .ibtn.primary:hover{ background:#0a3358; color:#fff; }
+  .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+  .kpi{ border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:#fff; }
+  .kpi .t{ font-size:12px; color:var(--soft); }
+  .kpi .v{ font-size:22px; margin-top:4px; }
+  .kpi .s{ font-size:12px; color:var(--soft); margin-top:2px; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  th{ text-align:left; font-size:12px; color:var(--soft); padding:8px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  td{ padding:8px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.n,th.n{ text-align:right; white-space:nowrap; }
+  .scroll{ overflow-x:auto; }
+  .muted{ color:var(--soft); font-size:13px; }
+  .erro{ color:#b42318; font-size:13px; margin-top:10px; min-height:18px; }
+  #loginBox{ max-width:380px; margin:60px auto; }
+  #loginBox .row{ margin-bottom:12px; }
+  .hidden{ display:none !important; }
+  .titulo-sec{ font-size:14px; margin:0 0 10px; color:var(--navy); }
+  @media print{
+    body{ background:#fff; color:#000; }
+    .no-print{ display:none !important; }
+    .card,.kpi{ border:1px solid #000; border-radius:0; }
+    th,td,.kpi .t,.kpi .s,.muted{ color:#000; }
+    th{ font-weight:700; }
+    td,.kpi .v{ font-weight:400; }
+    h1{ color:#000; }
+    .scroll{ overflow:visible; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="loginBox" class="card">
+    <h1 style="margin-bottom:14px;">Relatório de uso</h1>
+    <form id="loginForm" autocomplete="on">
+      <div class="row"><label for="email">E-mail</label><input id="email" type="email" required autocomplete="username"></div>
+      <div class="row"><label for="senha">Senha</label><input id="senha" type="password" required autocomplete="current-password"></div>
+      <button class="ibtn primary" type="submit" title="Entrar" style="width:100%;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      </button>
+      <div id="loginErro" class="erro"></div>
+    </form>
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div id="app" class="hidden">
+    <div class="top">
+      <h1>Relatório de uso — Analiza</h1>
+      <div class="acoes no-print">
+        <button class="ibtn" id="btnCsv" title="Baixar planilha (CSV)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button class="ibtn" id="btnPrint" title="Imprimir / salvar em PDF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
+        <button class="ibtn" id="btnSair" title="Sair"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+
+    <div class="card no-print">
+      <div class="filtros">
+        <div><label for="fDe">De</label><input id="fDe" type="date"></div>
+        <div><label for="fAte">Até</label><input id="fAte" type="date"></div>
+        <div><label for="fUsuario">Usuário</label><select id="fUsuario"><option value="">Todos</option></select></div>
+        <div><label for="fTipo">Tipo</label>
+          <select id="fTipo">
+            <option value="">Todos</option>
+            <option value="consulta_exame">Consulta de exame</option>
+            <option value="consulta_convenio">Consulta de convênio</option>
+            <option value="orcamento">Orçamento</option>
+          </select></div>
+        <div><button class="ibtn primary" id="btnAplicar" title="Aplicar filtros"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button></div>
+      </div>
+      <div id="erro" class="erro"></div>
+    </div>
+
+    <div class="muted" id="periodoTxt" style="margin-bottom:10px;"></div>
+
+    <div class="kpis" style="margin-bottom:14px;">
+      <div class="kpi"><div class="t">Consultas (exames + convênios)</div><div class="v" id="kCons">0</div><div class="s" id="kConsV">R$ 0,00</div></div>
+      <div class="kpi"><div class="t">Orçamentos emitidos</div><div class="v" id="kOrc">0</div><div class="s" id="kOrcV">R$ 0,00</div></div>
+      <div class="kpi"><div class="t">Total a cobrar</div><div class="v" id="kTotal">R$ 0,00</div><div class="s" id="kReg">0 registros</div></div>
+    </div>
+
+    <div class="card">
+      <h2 class="titulo-sec">Por usuário</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Usuário</th><th class="n">Consultas de exame</th><th class="n">Consultas de convênio</th><th class="n">Orçamentos</th><th class="n">Total (R$)</th></tr></thead>
+        <tbody id="tbUsuarios"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h2 class="titulo-sec">Por dia</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Dia</th><th class="n">Consultas</th><th class="n">Orçamentos</th><th class="n">Total (R$)</th></tr></thead>
+        <tbody id="tbDias"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h2 class="titulo-sec">Histórico detalhado</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Data e hora</th><th>Usuário</th><th>Tipo</th><th>Consultado / emitido</th><th class="n">Valor (R$)</th></tr></thead>
+        <tbody id="tbDetalhe"></tbody>
+      </table></div>
+      <div id="semDados" class="muted hidden" style="padding-top:10px;">Nenhum registro neste período.</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = "https://crmfougluewakblwdzee.supabase.co";
+const SUPABASE_KEY = "sb_publishable_op0Q_PnNLIPh-EmBkeOXUw_0K9N3Tyw";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { storage: window.sessionStorage } });
+
+const TIPO_ROTULO = { consulta_exame: "Consulta de exame", consulta_convenio: "Consulta de convênio", orcamento: "Orçamento" };
+const FUSO = "America/Sao_Paulo";
+let linhas = [];
+
+const $ = id => document.getElementById(id);
+const brl = n => (Number(n) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const dataHora = iso => new Date(iso).toLocaleString("pt-BR", { timeZone: FUSO, day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+const diaBR = iso => new Date(iso).toLocaleDateString("pt-BR", { timeZone: FUSO });
+const esc = t => String(t == null ? "" : t).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+
+function mostrar(logado){
+  $("loginBox").classList.toggle("hidden", logado);
+  $("app").classList.toggle("hidden", !logado);
+}
+
+function inicioMes(){
+  const hoje = new Date(new Date().toLocaleString("en-US", { timeZone: FUSO }));
+  const p = n => String(n).padStart(2, "0");
+  return { de: `${hoje.getFullYear()}-${p(hoje.getMonth()+1)}-01`, ate: `${hoje.getFullYear()}-${p(hoje.getMonth()+1)}-${p(hoje.getDate())}` };
+}
+
+async function buscarTudo(){
+  const de = $("fDe").value, ate = $("fAte").value;
+  const tipo = $("fTipo").value, usuario = $("fUsuario").value;
+  const todas = [];
+  const PAG = 1000;
+  for(let ini = 0; ; ini += PAG){
+    let q = db.from("rcc_uso").select("*").order("criado_em", { ascending:false }).range(ini, ini + PAG - 1);
+    if(de)  q = q.gte("criado_em", new Date(de + "T00:00:00-03:00").toISOString());
+    if(ate) q = q.lte("criado_em", new Date(ate + "T23:59:59.999-03:00").toISOString());
+    if(tipo) q = q.eq("tipo", tipo);
+    if(usuario) q = q.eq("usuario_email", usuario);
+    const { data, error } = await q;
+    if(error) throw error;
+    todas.push(...data);
+    if(data.length < PAG) break;
+  }
+  return todas;
+}
+
+function preencherUsuarios(rows){
+  const atual = $("fUsuario").value;
+  const mapa = new Map();
+  rows.forEach(r => { if(r.usuario_email && !mapa.has(r.usuario_email)) mapa.set(r.usuario_email, r.usuario_nome || r.usuario_email); });
+  const opts = [...mapa.entries()].sort((a,b) => a[1].localeCompare(b[1], "pt-BR"));
+  const sel = $("fUsuario");
+  const antigos = [...sel.options].slice(1).map(o => o.value);
+  opts.forEach(([email, nome]) => { if(!antigos.includes(email)){ const o = document.createElement("option"); o.value = email; o.textContent = `${nome} (${email})`; sel.appendChild(o); } });
+  sel.value = atual;
+}
+
+function desenhar(rows){
+  const cons = rows.filter(r => r.tipo !== "orcamento");
+  const orc  = rows.filter(r => r.tipo === "orcamento");
+  const soma = a => a.reduce((t, r) => t + Number(r.valor_cobrado || 0), 0);
+  $("kCons").textContent = cons.length;  $("kConsV").textContent = brl(soma(cons));
+  $("kOrc").textContent  = orc.length;   $("kOrcV").textContent  = brl(soma(orc));
+  $("kTotal").textContent = brl(soma(rows));
+  $("kReg").textContent = `${rows.length} registro(s)`;
+  $("periodoTxt").textContent = `Período: ${$("fDe").value ? $("fDe").value.split("-").reverse().join("/") : "início"} a ${$("fAte").value ? $("fAte").value.split("-").reverse().join("/") : "hoje"}`;
+
+  // por usuário
+  const us = new Map();
+  rows.forEach(r => {
+    const k = r.usuario_email || r.user_id;
+    if(!us.has(k)) us.set(k, { nome: r.usuario_nome || r.usuario_email || "—", ex:0, cv:0, orc:0, tot:0 });
+    const u = us.get(k);
+    if(r.tipo === "consulta_exame") u.ex++; else if(r.tipo === "consulta_convenio") u.cv++; else u.orc++;
+    u.tot += Number(r.valor_cobrado || 0);
+  });
+  $("tbUsuarios").innerHTML = [...us.values()].sort((a,b) => b.tot - a.tot).map(u =>
+    `<tr><td>${esc(u.nome)}</td><td class="n">${u.ex}</td><td class="n">${u.cv}</td><td class="n">${u.orc}</td><td class="n">${brl(u.tot)}</td></tr>`).join("")
+    || `<tr><td colspan="5" class="muted">—</td></tr>`;
+
+  // por dia
+  const dias = new Map();
+  rows.forEach(r => {
+    const d = diaBR(r.criado_em);
+    if(!dias.has(d)) dias.set(d, { c:0, o:0, t:0, ord: new Date(r.criado_em).getTime() });
+    const x = dias.get(d);
+    if(r.tipo === "orcamento") x.o++; else x.c++;
+    x.t += Number(r.valor_cobrado || 0);
+    x.ord = Math.max(x.ord, new Date(r.criado_em).getTime());
+  });
+  $("tbDias").innerHTML = [...dias.entries()].sort((a,b) => b[1].ord - a[1].ord).map(([d,x]) =>
+    `<tr><td>${d}</td><td class="n">${x.c}</td><td class="n">${x.o}</td><td class="n">${brl(x.t)}</td></tr>`).join("")
+    || `<tr><td colspan="4" class="muted">—</td></tr>`;
+
+  // detalhe
+  $("tbDetalhe").innerHTML = rows.map(r => {
+    const det = r.tipo === "orcamento"
+      ? `${esc(r.detalhe)} · ${r.qtd_itens || 0} exame(s) · total do orçamento ${brl(r.valor_orcamento)}`
+      : esc(r.detalhe);
+    return `<tr><td style="white-space:nowrap;">${dataHora(r.criado_em)}</td><td>${esc(r.usuario_nome || r.usuario_email)}</td><td>${TIPO_ROTULO[r.tipo] || esc(r.tipo)}</td><td>${det}</td><td class="n">${brl(r.valor_cobrado)}</td></tr>`;
+  }).join("");
+  $("semDados").classList.toggle("hidden", rows.length > 0);
+}
+
+async function atualizar(){
+  $("erro").textContent = "";
+  try{
+    linhas = await buscarTudo();
+    preencherUsuarios(linhas);
+    desenhar(linhas);
+  }catch(e){
+    $("erro").textContent = /permission|policy|42501/i.test(e.message || "")
+      ? "Este usuário não tem permissão para ver o relatório."
+      : "Não foi possível carregar: " + (e.message || e);
+  }
+}
+
+function baixarCsv(){
+  const cab = ["Data e hora","Usuário","E-mail","Tipo","Consultado / emitido","Qtd. exames","Total do orçamento","Valor cobrado"];
+  const num = n => n == null ? "" : String(Number(n).toFixed(2)).replace(".", ",");
+  const cel = v => { const t = String(v == null ? "" : v).replace(/"/g, '""'); return /[;"\n]/.test(t) ? `"${t}"` : t; };
+  const linhasCsv = linhas.map(r => [dataHora(r.criado_em), r.usuario_nome, r.usuario_email, TIPO_ROTULO[r.tipo] || r.tipo, r.detalhe, r.qtd_itens ?? "", num(r.valor_orcamento), num(r.valor_cobrado)].map(cel).join(";"));
+  const csv = "﻿" + [cab.join(";"), ...linhasCsv].join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a"); a.href = url; a.download = `uso-analiza-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  $("loginErro").textContent = "";
+  const { error } = await db.auth.signInWithPassword({ email: $("email").value.trim(), password: $("senha").value });
+  if(error){ $("loginErro").textContent = "E-mail ou senha incorretos."; return; }
+  iniciar();
+});
+$("btnAplicar").addEventListener("click", atualizar);
+$("btnCsv").addEventListener("click", baixarCsv);
+$("btnPrint").addEventListener("click", () => window.print());
+$("btnSair").addEventListener("click", async () => { await db.auth.signOut(); linhas = []; mostrar(false); });
+
+async function iniciar(){
+  const { data } = await db.auth.getSession();
+  if(!data || !data.session){ mostrar(false); return; }
+  mostrar(true);
+  if(!$("fDe").value){ const m = inicioMes(); $("fDe").value = m.de; $("fAte").value = m.ate; }
+  atualizar();
+}
+iniciar();
+</script>
+</body>
+</html>
